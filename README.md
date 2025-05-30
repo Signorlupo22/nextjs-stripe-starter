@@ -1,105 +1,157 @@
-<a href="https://demo-nextjs-with-supabase.vercel.app/">
-  <img alt="Next.js and Supabase Starter Kit - the fastest way to build apps with Next.js and Supabase" src="https://demo-nextjs-with-supabase.vercel.app/opengraph-image.png">
-  <h1 align="center">Next.js and Supabase Starter Kit</h1>
-</a>
+# Next.js Stripe & Supabase Boilerplate
 
-<p align="center">
- The fastest way to build apps with Next.js and Supabase
-</p>
-
-<p align="center">
-  <a href="#features"><strong>Features</strong></a> ·
-  <a href="#demo"><strong>Demo</strong></a> ·
-  <a href="#deploy-to-vercel"><strong>Deploy to Vercel</strong></a> ·
-  <a href="#clone-and-run-locally"><strong>Clone and run locally</strong></a> ·
-  <a href="#feedback-and-issues"><strong>Feedback and issues</strong></a>
-  <a href="#more-supabase-examples"><strong>More Examples</strong></a>
-</p>
-<br/>
+A modern Next.js boilerplate that integrates Stripe payments and Supabase for handling subscriptions, one-time payments, and user management. This project provides a complete solution for implementing payment processing in your Next.js applications.
 
 ## Features
 
-- Works across the entire [Next.js](https://nextjs.org) stack
-  - App Router
-  - Pages Router
-  - Middleware
-  - Client
-  - Server
-  - It just works!
-- supabase-ssr. A package to configure Supabase Auth to use cookies
-- Password-based authentication block installed via the [Supabase UI Library](https://supabase.com/ui/docs/nextjs/password-based-auth)
-- Styling with [Tailwind CSS](https://tailwindcss.com)
-- Components with [shadcn/ui](https://ui.shadcn.com/)
-- Optional deployment with [Supabase Vercel Integration and Vercel deploy](#deploy-your-own)
-  - Environment variables automatically assigned to Vercel project
+- 🔐 **Authentication** - Built-in user authentication with Supabase
+- 💳 **Payment Processing** - Seamless integration with Stripe for both one-time and recurring payments
+- 📦 **Bundle Management** - Create and manage different types of payment bundles (subscription plan)
+- 🔄 **Subscription Handling** - Full support for recurring subscriptions with automatic renewal
+- 🎯 **Webhook Integration** - Robust webhook handling for Stripe events
+- 🛡️ **Type Safety** - Built with TypeScript for better development experience
 
-## Demo
+## Tech Stack
 
-You can view a fully working demo at [demo-nextjs-with-supabase.vercel.app](https://demo-nextjs-with-supabase.vercel.app/).
+- **Framework**: Next.js 14
+- **Database**: Supabase
+- **Payment Processing**: Stripe
+- **Language**: TypeScript
+- **Authentication**: Supabase Auth
 
-## Deploy to Vercel
+## Prerequisites
 
-Vercel deployment will guide you through creating a Supabase account and project.
+Before you begin, ensure you have:
 
-After installation of the Supabase integration, all relevant environment variables will be assigned to the project so the deployment is fully functioning.
+- Node.js 18+ installed
+- A Stripe account with API keys
+- A Supabase project set up
+- Basic understanding of Next.js and TypeScript
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&project-name=nextjs-with-supabase&repository-name=nextjs-with-supabase&demo-title=nextjs-with-supabase&demo-description=This+starter+configures+Supabase+Auth+to+use+cookies%2C+making+the+user%27s+session+available+throughout+the+entire+Next.js+app+-+Client+Components%2C+Server+Components%2C+Route+Handlers%2C+Server+Actions+and+Middleware.&demo-url=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2F&external-id=https%3A%2F%2Fgithub.com%2Fvercel%2Fnext.js%2Ftree%2Fcanary%2Fexamples%2Fwith-supabase&demo-image=https%3A%2F%2Fdemo-nextjs-with-supabase.vercel.app%2Fopengraph-image.png)
+## Environment Variables
 
-The above will also clone the Starter kit to your GitHub, you can clone that locally and develop locally.
+Create a `.env.local` file in the root directory with the following variables:
 
-If you wish to just develop locally and not deploy to Vercel, [follow the steps below](#clone-and-run-locally).
+```env
+# Stripe
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
 
-## Clone and run locally
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
 
-1. You'll first need a Supabase project which can be made [via the Supabase dashboard](https://database.new)
+## Database Schema
 
-2. Create a Next.js app using the Supabase Starter template npx command
+The project uses the following main tables in Supabase:
 
-   ```bash
-   npx create-next-app --example with-supabase with-supabase-app
-   ```
+### User
+- `id`: UUID (Primary Key)
+- `email`: String
+- `first_name`: String
+- `last_name`: String
+- `stripe_customer_id`: String
 
-   ```bash
-   yarn create next-app --example with-supabase with-supabase-app
-   ```
+### Bundle
+- `id`: Integer (Primary Key)
+- `user_id`: UUID (Foreign Key to User)
+- `price`: Decimal
+- `currency`: String
+- `type`: String ('recurring' or 'one-time')
+- `stripe_price_id`: String
 
-   ```bash
-   pnpm create next-app --example with-supabase with-supabase-app
-   ```
+### Subscriptions
+- `id`: UUID (Primary Key)
+- `user_id`: UUID (Foreign Key to User)
+- `bundle_id`: Integer (Foreign Key to Bundle)
+- `payment_status`: String
+- `price`: Decimal
+- `frequency`: String
+- `adyen_payment_reference`: String
+- `start_date`: Timestamp
+- `end_date`: Timestamp
 
-3. Use `cd` to change into the app's directory
+### Payments
+- `id`: UUID (Primary Key)
+- `user_id`: UUID (Foreign Key to User)
+- `amount`: Decimal
+- `payment_type`: String
+- `status`: String
+- `payment_method`: String
+- `adyen_transaction_id`: String
+- `creator_id`: UUID
+- `subscription_id`: UUID (Foreign Key to Subscriptions)
 
-   ```bash
-   cd with-supabase-app
-   ```
+## Getting Started
 
-4. Rename `.env.example` to `.env.local` and update the following:
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd [project-name]
+```
 
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=[INSERT SUPABASE PROJECT URL]
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=[INSERT SUPABASE PROJECT API ANON KEY]
-   ```
+2. Install dependencies:
+```bash
+npm install
+```
 
-   Both `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` can be found in [your Supabase project's API settings](https://supabase.com/dashboard/project/_?showConnect=true)
+3. Set up your environment variables as described above
 
-5. You can now run the Next.js local development server:
+4. Run the development server:
+```bash
+npm run dev
+```
 
-   ```bash
-   npm run dev
-   ```
+## Key Features Implementation
 
-   The starter kit should now be running on [localhost:3000](http://localhost:3000/).
+### Creating a Checkout Session
 
-6. This template comes with the default shadcn/ui style initialized. If you instead want other ui.shadcn styles, delete `components.json` and [re-install shadcn/ui](https://ui.shadcn.com/docs/installation/next)
+```typescript
+const checkoutSession = await createCheckoutSession(bundleId);
+```
 
-> Check out [the docs for Local Development](https://supabase.com/docs/guides/getting-started/local-development) to also run Supabase locally.
+### Handling Subscriptions
 
-## Feedback and issues
+```typescript
+// Create a subscription
+const subscription = await createSubscription({
+  stripeCustomerId,
+  paymentMethodId,
+  buyer_id,
+  priceId,
+  bundleId
+});
 
-Please file feedback and issues over on the [Supabase GitHub org](https://github.com/supabase/supabase/issues/new/choose).
+// Cancel a subscription
+const result = await cancelSubscriptionUser(subscription);
+```
 
-## More Supabase examples
+### Webhook Handling
 
-- [Next.js Subscription Payments Starter](https://github.com/vercel/nextjs-subscription-payments)
-- [Cookie-based Auth and the Next.js 13 App Router (free course)](https://youtube.com/playlist?list=PL5S4mPUpp4OtMhpnp93EFSo42iQ40XjbF)
-- [Supabase Auth and the Next.js App Router](https://github.com/supabase/supabase/tree/master/examples/auth/nextjs)
+The project includes a comprehensive webhook handler for Stripe events:
+- Payment success/failure
+- Subscription creation/updates/deletion
+- Setup intent completion
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Support
+
+For support, please open an issue in the GitHub repository or contact the maintainers.
+
+## Acknowledgments
+
+- [Next.js](https://nextjs.org/)
+- [Stripe](https://stripe.com/)
+- [Supabase](https://supabase.com/)
