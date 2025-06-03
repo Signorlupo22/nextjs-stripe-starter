@@ -1,0 +1,89 @@
+include:
+  - ./docker-compose-supabase.yml
+services:
+  watchtower:
+    image: containrrr/watchtower
+    command:
+      - "--label-enable"
+      - "--interval"
+      - "30"
+      - "--rolling-restart"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/eliot/.docker/config.json:/run/secrets/config.json
+    environment:
+      - DOCKER_CONFIG=/run/secrets  # Point to where the Docker config.json will be mounted
+    deploy:
+      replicas: 3  # Avvia 3 repliche in Swarm
+  reverse-proxy:
+   image: traefik:v3.1
+   command:
+    - "--api.insecure=true"
+    - "--providers.docker"
+    - "--providers.docker.exposedbydefault=false"
+    - "--certificatesresolvers.myresolver.acme.tlschallenge=true"
+    - "--certificatesresolvers.myresolver.acme.email=dev.thomasfavero@gmail.com"
+    - "--certificatesresolvers.myresolver.acme.storage=/letsendcrypt/acme.json"
+    - "--entrypoints.web.address=:80"
+    - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+    - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+    - "--entrypoints.websecure.address=:443"
+    - "--entrypoints.postgres.address=:5433"
+   ports:
+    - "80:80"
+    - "443:443"
+    - "8088:8080"
+    - "5433:5433"
+    - "8001:8000"
+   volumes:
+    - letsendcrypt:/letsendcrypt
+    - /var/run/docker.sock:/var/run/docker.sock
+   deploy:
+      replicas: 2  # Avvia 2 repliche in Swarm
+  frontend:
+    image: singorlupo/teachflow:release
+    platform: linux/amd64
+    labels:
+      # Configurazione per Next.js
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextjs.rule=Host(`teachflow.app`)"
+      - "traefik.http.routers.nextjs.entrypoints=websecure"
+      - "traefik.http.services.nextjs.loadbalancer.server.port=3000"
+      - "traefik.http.routers.nextjs.tls.certresolver=myresolver"
+
+
+      - "traefik.tcp.routers.ws.rule=HostSNI(`teachflow.app`)"
+      - "traefik.tcp.routers.ws.entrypoints=websecure"
+      - "traefik.tcp.routers.ws.tls=true"
+      - "traefik.tcp.services.ws.loadbalancer.server.port=3000"
+      - "traefik.http.routers.ws.tls.certresolver=myresolver"
+      # Configurazione per il WebSocket
+      #- "traefik.http.routers.websock.rule=Host(`test.teachflow.app`) && PathPrefix(`/ws`)"
+      #- "traefik.http.routers.websock.entrypoints=websecure"
+      #- "traefik.http.services.websock.loadbalancer.server.port=3000"
+      #- "traefik.http.routers.websock.tls.certresolver=myresolver"
+      #- "traefik.http.routers.websock.middlewares=websock-websocket"
+
+      # Middlewares per il WebSocket
+      #- "traefik.http.middlewares.websock-websocket.headers.customrequestheaders.Upgrade=websocket"
+      #- "traefik.http.middlewares.websock-websocket.headers.customresponseheaders.Connection=Upgrade"
+
+      # Abilitazione di Watchtower
+      - "com.centurylinklabs.watchtower.enable=true"
+    depends_on:
+      - db
+    environment:
+      - SUPABASE_ANON_KEY=${ANON_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_PUBLIC_KEY=${STRIPE_PUBLIC_KEY}
+      - NEXT_PUBLIC_URL=https://teachflow.app
+      - SUPABASE_URL=http://kong:8000
+      - JWTSECRETKEY=${JWTSECRETKEY}
+      - JWT_SECRET_SALT=${JWT_SECRET_SALT}
+
+    deploy:
+      mode: replicated
+      replicas: 3
+    command: "npm run start"  # Avvia Next.js in produzione
+volumes:
+  letsendcrypt:

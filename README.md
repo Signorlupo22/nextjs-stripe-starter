@@ -103,6 +103,61 @@ npm install
 npm run dev
 ```
 
+## Docker Setup
+
+The project includes Docker configuration for easy deployment and scaling. The setup consists of multiple services orchestrated through Docker Compose.
+
+### Docker Services
+
+1. **TeachFlow Application**
+   - Next.js application running in production mode
+   - Configured with 3 replicas for high availability
+   - Exposed on port 3000 internally
+
+2. **Reverse Proxy (Traefik)**
+   - Handles SSL termination and routing
+   - Manages automatic SSL certificate generation
+   - Exposes ports:
+     - 80 (HTTP)
+     - 443 (HTTPS)
+     - 8088 (Traefik dashboard)
+     - 5433 (PostgreSQL)
+     - 8001 (API)
+
+3. **Watchtower**
+   - Automatically updates containers when new images are available
+   - Runs with 3 replicas
+   - Checks for updates every 30 seconds
+
+### Building and Running
+
+1. Build the Docker image:
+```bash
+docker build --platform linux/amd64 -t singorlupo/teachflow:release .
+```
+
+2. Push the image to Docker Hub:
+```bash
+docker push singorlupo/teachflow:release
+```
+
+3. Start the services:
+```bash
+docker-compose up -d
+```
+
+### Environment Variables for Docker
+
+The following environment variables are required in your `.env` file:
+
+```env
+ANON_KEY=your_supabase_anon_key
+STRIPE_SECRET_KEY=your_stripe_secret_key
+STRIPE_PUBLIC_KEY=your_stripe_public_key
+JWTSECRETKEY=your_jwt_secret
+JWT_SECRET_SALT=your_jwt_salt
+```
+
 ## Key Features Implementation
 
 ### Creating a Checkout Session
