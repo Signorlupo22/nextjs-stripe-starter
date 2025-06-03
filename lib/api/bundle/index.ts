@@ -270,13 +270,7 @@ export async function getBundleById(id: number): Promise<Bundle | { error: strin
     const { data, error } = await supabase
         .from("Bundle")
         .select(`
-            *,
-            BundleCourse (
-                course_id,
-                Course!inner (
-                    *
-                )
-            )
+            *
         `)
         .eq("id", id)
         .eq("BundleCourse.Course.public", true)
