@@ -166,6 +166,53 @@ JWT_SECRET_SALT=your_jwt_salt
 const checkoutSession = await createCheckoutSession(bundleId);
 ```
 
+The `createCheckoutSession` function is used to create a Stripe PaymentIntent or SetupIntent with automatic payment methods enabled. This is specifically designed for use with Stripe's embedded UI components, providing a seamless checkout experience directly within your application. The function returns a client secret that can be used to initialize the Stripe Elements UI.
+
+Example usage in a React component:
+```typescript
+useEffect(() => {
+    (async () => {
+        try {
+            const result = await createCheckoutSession(bundleId);
+            setClientSecret(result.client_secret);
+            setOptions({
+                clientSecret: result.client_secret ?? undefined,
+                appearance,
+            });
+        } catch (err) {
+            console.error('Error creating intent:', err);
+        }
+    })();
+}, [bundleId]);
+```
+
+### Stripe Checkout Component
+
+The project includes a custom Stripe Checkout component (`components/paymentUi/stripeCheckout.tsx`) that provides a pre-built, secure payment form. This component:
+
+- Integrates with Stripe Elements for a secure, customizable payment form
+- Handles both one-time payments and subscription setup
+- Provides real-time validation and error handling
+- Supports various payment methods through Stripe's automatic payment methods
+- Includes loading states and error handling
+
+To use the Stripe Checkout component:
+
+```typescript
+import { StripeCheckout } from '@/components/paymentUi/stripeCheckout';
+
+// In your component
+<StripeCheckout 
+    bundleId={bundleId}
+    onSuccess={(paymentIntent) => {
+        // Handle successful payment
+    }}
+    onError={(error) => {
+        // Handle payment error
+    }}
+/>
+```
+
 ### Handling Subscriptions
 
 ```typescript
@@ -180,6 +227,25 @@ const subscription = await createSubscription({
 
 // Cancel a subscription
 const result = await cancelSubscriptionUser(subscription);
+```
+
+The `createSubscription` function is used in the Stripe webhook callback (`app/api/stripe/callback/route.ts`) when a setup intent succeeds. This happens after a customer has successfully configured their payment method. The webhook handler:
+
+1. Receives the setup intent success event
+2. Extracts the customer's Stripe ID, payment method ID, and metadata (user ID and bundle ID)
+3. Retrieves the bundle information to get the price ID
+4. Creates the subscription with all these details
+
+Example from the webhook handler:
+```typescript
+case 'setup_intent.succeeded':
+  createSubscription({
+    stripeCustomerId: setupIntent.customer,
+    paymentMethodId,
+    buyer_id: userId,
+    bundleId: bundleId,
+    priceId: bundle.stripe_price_id,
+  });
 ```
 
 ### Webhook Handling
